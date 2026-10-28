@@ -5,12 +5,16 @@
  * @format
  */
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { StatusBar, useColorScheme } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { RechargeHistoryScreen } from './src/screens/recharge-history/recharge-history.screen';
+import { WalletScreen } from './src/screens/wallet/wallet.screen';
+import { navigationRef } from './src/navigation/navigation.service';
+import { RootStackParamList } from './src/types/navigation';
+
+const Stack = createStackNavigator<RootStackParamList>();
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -18,28 +22,14 @@ function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator initialRouteName="Wallet" screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Wallet" component={WalletScreen} />
+          <Stack.Screen name="RechargeHistory" component={RechargeHistoryScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export default App;

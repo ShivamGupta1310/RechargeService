@@ -1,0 +1,29 @@
+{
+  "wallet": "Wallet",
+  "availableBalance": "Available balance",
+  "rechargeMobile": "Recharge mobile",
+  "mobileNumber": "Mobile number",
+  "mobileNumberRequired": "Mobile number *",
+  "operator": "Operator",
+  "operatorRequired": "Operator *",
+  "amount": "Amount",
+  "amountRequired": "Amount *",
+  "recharge": "Recharge",
+  "rechargeHistory": "Recharge history",
+  "history": "History",
+  "rechargeHistorySubtitle": "Track your recent mobile recharges",
+  "backToRecharge": "Back to recharge",
+  "alreadyRechargeTitle": "Already recharged",
+  "alreadyRechargeMessage": "This number already has a recharge. Do you want to continue?",
+  "cancel": "Cancel",
+  "continue": "Continue",
+  "noRecharges": "No recharges yet",
+  "somethingWentWrong": "Server is not running. Please start the server and try again.",
+  "statuses": {
+    "INITIATED": "Initiated",
+    "PENDING": "In Progress",
+    "SUCCESS": "Successful",
+    "FAILED": "Failed",
+    "REFUNDED": "Refunded"
+  }
+}

@@ -1,97 +1,54 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Recharge Service
 
-# Getting Started
+An end-to-end React Native recharge demo backed by an Express + SQLite service.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
-
-## Step 1: Start Metro
-
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
+## Run it
 
 ```sh
-# Using npm
+npm install
+npm run server
+```
+
+In another terminal:
+
+```sh
 npm start
-
-# OR using Yarn
-yarn start
+npm run ios       # or: npm run android
 ```
 
-## Step 2: Build and run your app
+The app expects the API at `http://localhost:3000`. For a physical device, update `src/constants/api.ts` to the machine's LAN address.
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+## API
 
-### Android
+- `POST /recharges` accepts `{ number, operator, amount }` and an `Idempotency-Key` header.
+- `GET /wallet` returns the current and ledger-derived reconciliation balances.
+- `GET /recharges` and `GET /recharges/:id` return order state/history.
+- `GET /callback-anomalies` returns callbacks that conflict with an already-terminal order for manual review.
+- `POST /operator/webhook` accepts `{ eventId, rechargeId, result: "SUCCESS" | "FAILED" }`.
+- `POST /reconciliation/run` checks old pending orders with the operator status API.
+
+The local operator intentionally delays callbacks, duplicates some callbacks, and sometimes throws a timeout after accepting a request.
+
+## Design decisions
+
+- SQLite transactions make wallet debit + debit ledger entry atomic. A unique idempotency key prevents a double submit from creating a second order or debit.
+- Webhook event IDs are stored with `INSERT OR IGNORE`, so retries are harmless. Terminal orders ignore late callbacks, preventing a late success from undoing a refund.
+- If an operator request times out, the order remains `PENDING` and is not refunded. Reconciliation uses the operator status-check API; only a confirmed `FAILED` result triggers the refund.
+- A callback received after an order is terminal (`SUCCESS`, `FAILED`, or `REFUNDED`) is stored in `callback_anomalies` and exposed through `GET /callback-anomalies`. It does not change the order status or ledger, so conflicting callbacks require manual review.
+- Refunds are protected by both `refund_applied` and a unique `(recharge_id, entry_type)` ledger constraint. The credit and `REFUNDED` state update happen in one transaction.
+- The ledger is append-only for wallet movements. `GET /wallet` recomputes the expected balance from the initial balance plus ledger entries.
+- The mobile UI polls every two seconds to show delayed operator results and recharge history. A production app would use push updates or a durable client cache.
+
+## Tests
 
 ```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+npm run server:test
+npm test
+npx tsc --noEmit
 ```
 
-### iOS
+The service tests cover idempotent double submit, exactly-once refund on duplicate webhook, and a late success after a failure/refund. The default React Native render test remains in place.
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+## With more time
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+I would add authentication and per-user wallets, an outbox/queue for operator calls, durable retry/backoff and dead-letter handling, signed webhook verification, a real operator adapter contract, migrations, structured logs/metrics, rate limiting, and a background scheduler for reconciliation instead of the manual endpoint.

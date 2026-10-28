@@ -20,12 +20,20 @@ The app expects the API at `http://localhost:3000`. For a physical device, updat
 
 ## API
 
-- `POST /recharges` accepts `{ number, operator, amount }` and an `Idempotency-Key` header.
-- `GET /wallet` returns the current and ledger-derived reconciliation balances.
-- `GET /recharges` and `GET /recharges/:id` return order state/history.
-- `GET /callback-anomalies` returns callbacks that conflict with an already-terminal order for manual review.
+### App APIs
+
+- `POST /recharges` creates a recharge. It accepts `{ number, operator, amount }` and an `Idempotency-Key` header.
+- `GET /wallet` returns the wallet balance and ledger-derived reconciliation balance.
+- `GET /recharges` returns recharge history. The mobile app polls this endpoint every 10 seconds.
+
+### Operator and operations APIs
+
+These endpoints are not called directly by the mobile UI, but are required for operator callbacks, timeout recovery, and manual review:
+
+- `GET /recharges/:id` checks one recharge's current state.
 - `POST /operator/webhook` accepts `{ eventId, rechargeId, result: "SUCCESS" | "FAILED" }`.
 - `POST /reconciliation/run` checks old pending orders with the operator status API.
+- `GET /callback-anomalies` lists callbacks that conflict with an already-terminal order.
 
 The local operator intentionally delays callbacks, duplicates some callbacks, and sometimes throws a timeout after accepting a request.
 
@@ -37,7 +45,7 @@ The local operator intentionally delays callbacks, duplicates some callbacks, an
 - A callback received after an order is terminal (`SUCCESS`, `FAILED`, or `REFUNDED`) is stored in `callback_anomalies` and exposed through `GET /callback-anomalies`. It does not change the order status or ledger, so conflicting callbacks require manual review.
 - Refunds are protected by both `refund_applied` and a unique `(recharge_id, entry_type)` ledger constraint. The credit and `REFUNDED` state update happen in one transaction.
 - The ledger is append-only for wallet movements. `GET /wallet` recomputes the expected balance from the initial balance plus ledger entries.
-- The mobile UI polls every two seconds to show delayed operator results and recharge history. A production app would use push updates or a durable client cache.
+- The mobile UI polls every 10 seconds to show delayed operator results and recharge history. A production app would use push updates or a durable client cache.
 
 ## Tests
 
